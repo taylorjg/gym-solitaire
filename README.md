@@ -1,3 +1,5 @@
+# Local Installation
+
 ```
 $ pip3 install -e .
 Obtaining file:///Users/administrator/HomeProjects/solitaire-rl-slm
@@ -11,3 +13,8 @@ Installing collected packages: gym-solitaire
   Running setup.py develop for gym-solitaire
 Successfully installed gym-solitaire
 ```
+
+# TODO
+
+* implement `render`
+* add unit tests 
