@@ -16,5 +16,5 @@ Successfully installed gym-solitaire
 
 # TODO
 
-* implement `render`
+* ~~implement `render`~~
 * add unit tests 

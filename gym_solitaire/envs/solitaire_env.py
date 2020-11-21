@@ -78,6 +78,7 @@ def decode_action(encoded_action):
 
 class SolitaireEnv(Env):
     metadata = {'render.modes': ['human']}
+    reward_range = (-100, 0)
 
     def __init__(self):
         self._board = create_board()
@@ -104,8 +105,17 @@ class SolitaireEnv(Env):
         return obs, reward, done, EMPTY_INFO
 
     def render(self, mode='human'):
-        # TODO
-        pass
+        if mode != 'human':
+            super().render(mode=mode)
+        for row in range(7):
+            line = ''
+            for col in range(7):
+                location = row, col
+                if location in self._board:
+                    line += 'X' if self._board[location] else '.'
+                else:
+                    line += ' '
+            print(line)
 
     def _calculate_final_reward(self):
         reward = 0
