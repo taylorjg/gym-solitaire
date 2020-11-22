@@ -16,5 +16,10 @@ Successfully installed gym-solitaire
 
 # TODO
 
-* ~~implement `render`~~
-* add unit tests 
+* ~~implement `render` for mode 'human'~~
+* implement `render` for mode 'rgb_array'
+  * for an example, see:
+    * https://github.com/openai/gym/blob/master/gym/envs/classic_control/cartpole.py#L161 
+    * https://github.com/openai/gym/blob/master/gym/envs/classic_control/rendering.py
+* add class/method comments
+* ~~add unit tests~~

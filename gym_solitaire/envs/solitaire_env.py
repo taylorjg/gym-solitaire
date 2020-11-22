@@ -1,5 +1,6 @@
 from collections import namedtuple
 from gym import Env, spaces
+import numpy as np
 
 Location = namedtuple('Location', ['row', 'col'])
 
@@ -28,7 +29,8 @@ def create_board():
     board = {}
     for row, col_range in enumerate(col_ranges):
         for col in col_range:
-            board[Location(row, col)] = True
+            location = Location(row, col)
+            board[location] = True
     board[CENTRE] = False
     return board
 
@@ -83,10 +85,16 @@ class SolitaireEnv(Env):
     def __init__(self):
         self._board = create_board()
         self._encoded_actions = all_possible_actions(self._board)
-        self.observation_space = spaces.MultiBinary(len(self._board))
+        self.observation_space = spaces.Box(low=0, high=1, shape=(len(self._board),), dtype=np.float32)
         self.action_space = spaces.Discrete(len(self._encoded_actions))
 
+    def seed(self, seed=None):
+        return [seed]
+
     def reset(self):
+        for location in self._board.keys():
+            self._board[location] = True
+        self._board[CENTRE] = False
         return self._make_observation()
 
     def step(self, action_index):
@@ -116,6 +124,7 @@ class SolitaireEnv(Env):
                 else:
                     line += ' '
             print(line)
+        print()
 
     def _calculate_final_reward(self):
         reward = 0
@@ -129,7 +138,8 @@ class SolitaireEnv(Env):
         return reward
 
     def _make_observation(self):
-        return list(map(int, self._board.values()))
+        values = list(self._board.values())
+        return np.array(values, dtype=np.float32)
 
     def _get_valid_action_indices(self):
         action_indices = []
