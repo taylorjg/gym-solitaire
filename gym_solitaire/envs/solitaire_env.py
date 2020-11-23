@@ -3,6 +3,7 @@ from gym import Env, spaces
 import numpy as np
 
 Location = namedtuple('Location', ['row', 'col'])
+Action = namedtuple('Action', ['from_location', 'via_location', 'to_location'])
 
 CENTRE = Location(3, 3)
 
@@ -48,34 +49,16 @@ def follow_direction(location, direction):
         return Location(row + 1, col)
 
 
-def all_possible_actions(board):
-    encoded_actions = []
-    for location in board.keys():
+def all_actions(board):
+    actions = []
+    for from_location in board.keys():
         for direction in DIRECTIONS:
-            via = follow_direction(location, direction)
-            to = follow_direction(via, direction)
-            if via in board and to in board:
-                encoded_action = encode_action(location, direction)
-                encoded_actions.append(encoded_action)
-    return encoded_actions
-
-
-def encode_action(location, direction):
-    row, col = location
-    assert 0 <= row <= 6
-    assert 0 <= col <= 6
-    assert direction in DIRECTIONS
-    return row | col << 4 | direction << 8
-
-
-def decode_action(encoded_action):
-    row = encoded_action & 0x00F
-    col = (encoded_action & 0x0F0) >> 4
-    direction = (encoded_action & 0x300) >> 8
-    assert 0 <= row <= 6
-    assert 0 <= col <= 6
-    assert direction in DIRECTIONS
-    return Location(row, col), direction
+            via_location = follow_direction(from_location, direction)
+            to_location = follow_direction(via_location, direction)
+            if via_location in board and to_location in board:
+                action = Action(from_location, via_location, to_location)
+                actions.append(action)
+    return actions
 
 
 class SolitaireEnv(Env):
@@ -84,9 +67,9 @@ class SolitaireEnv(Env):
 
     def __init__(self):
         self._board = create_board()
-        self._encoded_actions = all_possible_actions(self._board)
-        self.observation_space = spaces.Box(low=0, high=1, shape=(len(self._board),), dtype=np.float32)
-        self.action_space = spaces.Discrete(len(self._encoded_actions))
+        self._actions = all_actions(self._board)
+        self.observation_space = spaces.Box(0, 1, (len(self._board),), np.float32)
+        self.action_space = spaces.Discrete(len(self._actions))
 
     def seed(self, seed=None):
         return [seed]
@@ -102,11 +85,11 @@ class SolitaireEnv(Env):
         done = not self._get_valid_action_indices()
         if done:
             return obs, 0, True, EMPTY_INFO
-        assert 0 <= action_index < len(self._encoded_actions)
-        encoded_action = self._encoded_actions[action_index]
-        if not self._is_valid_action(encoded_action):
+        assert 0 <= action_index < len(self._actions)
+        action = self._actions[action_index]
+        if not self._is_valid_action(action):
             return obs, -100, False, EMPTY_INFO
-        self._make_move(encoded_action)
+        self._make_move(action)
         obs = self._make_observation()
         done = not self._get_valid_action_indices()
         reward = self._calculate_final_reward() if done else 0
@@ -143,15 +126,13 @@ class SolitaireEnv(Env):
 
     def _get_valid_action_indices(self):
         action_indices = []
-        for action_index, encoded_action in enumerate(self._encoded_actions):
-            if self._is_valid_action(encoded_action):
+        for action_index, action in enumerate(self._actions):
+            if self._is_valid_action(action):
                 action_indices.append(action_index)
         return action_indices
 
-    def _is_valid_action(self, encoded_action):
-        from_location, direction = decode_action(encoded_action)
-        via_location = follow_direction(from_location, direction)
-        to_location = follow_direction(via_location, direction)
+    def _is_valid_action(self, action):
+        from_location, via_location, to_location = action
         return all([
             from_location in self._board,
             via_location in self._board,
@@ -161,10 +142,8 @@ class SolitaireEnv(Env):
             not self._board[to_location]
         ])
 
-    def _make_move(self, encoded_action):
-        from_location, direction = decode_action(encoded_action)
-        via_location = follow_direction(from_location, direction)
-        to_location = follow_direction(via_location, direction)
+    def _make_move(self, action):
+        from_location, via_location, to_location = action
         assert from_location in self._board
         assert via_location in self._board
         assert to_location in self._board
