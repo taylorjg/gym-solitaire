@@ -23,3 +23,7 @@ Successfully installed gym-solitaire
     * https://github.com/openai/gym/blob/master/gym/envs/classic_control/rendering.py
 * add class/method comments
 * ~~add unit tests~~
+
+# Links
+
+* [How to create new environments for Gym](https://github.com/openai/gym/blob/master/docs/creating-environments.md)

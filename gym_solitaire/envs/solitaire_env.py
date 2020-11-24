@@ -49,7 +49,7 @@ def follow_direction(location, direction):
         return Location(row + 1, col)
 
 
-def all_actions(board):
+def make_all_actions(board):
     actions = []
     for from_location in board.keys():
         for direction in DIRECTIONS:
@@ -61,15 +61,45 @@ def all_actions(board):
     return actions
 
 
+def valid_action_indices(board):
+    action_indices = []
+    for action_index, action in enumerate(ALL_ACTIONS):
+        if is_valid_action(board, action):
+            action_indices.append(action_index)
+    return action_indices
+
+
+def is_valid_action(board, action):
+    from_location, via_location, to_location = action
+    return all([
+        from_location in board,
+        via_location in board,
+        to_location in board,
+        board[from_location],
+        board[via_location],
+        not board[to_location]
+    ])
+
+
+def observation_valid_actions(obs):
+    board = create_board()
+    assert len(obs) == len(board)
+    for index, location in enumerate(board.keys()):
+        board[location] = bool(obs[index])
+    return valid_action_indices(board)
+
+
+ALL_ACTIONS = make_all_actions(create_board())
+
+
 class SolitaireEnv(Env):
     metadata = {'render.modes': ['human']}
     reward_range = (-100, 0)
 
     def __init__(self):
         self._board = create_board()
-        self._actions = all_actions(self._board)
         self.observation_space = spaces.Box(0, 1, (len(self._board),), np.float32)
-        self.action_space = spaces.Discrete(len(self._actions))
+        self.action_space = spaces.Discrete(len(ALL_ACTIONS))
 
     def seed(self, seed=None):
         return [seed]
@@ -82,16 +112,16 @@ class SolitaireEnv(Env):
 
     def step(self, action_index):
         obs = self._make_observation()
-        done = not self._get_valid_action_indices()
+        done = not valid_action_indices(self._board)
         if done:
             return obs, 0, True, EMPTY_INFO
-        assert 0 <= action_index < len(self._actions)
-        action = self._actions[action_index]
-        if not self._is_valid_action(action):
+        assert 0 <= action_index < len(ALL_ACTIONS)
+        action = ALL_ACTIONS[action_index]
+        if not is_valid_action(self._board, action):
             return obs, -100, False, EMPTY_INFO
         self._make_move(action)
         obs = self._make_observation()
-        done = not self._get_valid_action_indices()
+        done = not valid_action_indices(self._board)
         reward = self._calculate_final_reward() if done else 0
         return obs, reward, done, EMPTY_INFO
 
@@ -124,24 +154,6 @@ class SolitaireEnv(Env):
         values = list(self._board.values())
         return np.array(values, dtype=np.float32)
 
-    def _get_valid_action_indices(self):
-        action_indices = []
-        for action_index, action in enumerate(self._actions):
-            if self._is_valid_action(action):
-                action_indices.append(action_index)
-        return action_indices
-
-    def _is_valid_action(self, action):
-        from_location, via_location, to_location = action
-        return all([
-            from_location in self._board,
-            via_location in self._board,
-            to_location in self._board,
-            self._board[from_location],
-            self._board[via_location],
-            not self._board[to_location]
-        ])
-
     def _make_move(self, action):
         from_location, via_location, to_location = action
         assert from_location in self._board
@@ -153,3 +165,10 @@ class SolitaireEnv(Env):
         self._board[from_location] = False
         self._board[via_location] = False
         self._board[to_location] = True
+
+    # @staticmethod
+    # def valid_actions(obs):
+    #     board = create_board()
+    #     for index, location in enumerate(board.keys()):
+    #         board[location] = bool(obs[index])
+    #     return valid_action_indices(board)

@@ -1,9 +1,11 @@
 import gym
+from gym_solitaire.envs import observation_valid_actions
 
 env = gym.make('gym_solitaire:gym_solitaire-v0')
 print(f"env.observation_space: {env.observation_space}")
 print(f"env.action_space: {env.action_space}")
 obs = env.reset()
+print(observation_valid_actions(obs))
 env.render('human')
 print(f"initial obs: {obs}")
 solution_actions = [

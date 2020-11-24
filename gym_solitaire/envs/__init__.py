@@ -1,1 +1,1 @@
-from gym_solitaire.envs.solitaire_env import SolitaireEnv
+from gym_solitaire.envs.solitaire_env import SolitaireEnv, observation_valid_actions
