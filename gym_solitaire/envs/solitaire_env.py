@@ -54,56 +54,68 @@ def iter_actions():
                 yield action
 
 
-def create_board():
-    board = {}
-    reset_board(board)
-    return board
+class Board:
+    def __init__(self, board_dict=None):
+        if board_dict is not None:
+            self._board = board_dict
+        else:
+            self._board = {}
+            self.reset()
 
+    def reset(self):
+        for location in LOCATIONS:
+            self._board[location] = location != CENTRE
 
-def reset_board(board):
-    for location in LOCATIONS:
-        board[location] = location != CENTRE
+    @property
+    def done(self):
+        return not self.valid_action_indices()
 
+    def valid_action_indices(self):
+        action_indices = []
+        for action_index, action in enumerate(ACTIONS):
+            if self.is_valid_action(action):
+                action_indices.append(action_index)
+        return action_indices
 
-def valid_action_indices(board):
-    action_indices = []
-    for action_index, action in enumerate(ACTIONS):
-        if is_valid_action(board, action):
-            action_indices.append(action_index)
-    return action_indices
+    def is_valid_action(self, action):
+        from_location, via_location, to_location = action
+        assert from_location in LOCATIONS
+        assert via_location in LOCATIONS
+        assert to_location in LOCATIONS
+        return all([
+            self._board[from_location],
+            self._board[via_location],
+            not self._board[to_location]
+        ])
 
+    def make_move(self, action):
+        from_location, via_location, to_location = action
+        assert from_location in LOCATIONS
+        assert via_location in LOCATIONS
+        assert to_location in LOCATIONS
+        assert self._board[from_location]
+        assert self._board[via_location]
+        assert not self._board[to_location]
+        self._board[from_location] = False
+        self._board[via_location] = False
+        self._board[to_location] = True
 
-def is_valid_action(board, action):
-    from_location, via_location, to_location = action
-    assert from_location in LOCATIONS
-    assert via_location in LOCATIONS
-    assert to_location in LOCATIONS
-    return all([
-        board[from_location],
-        board[via_location],
-        not board[to_location]
-    ])
+    def __getitem__(self, location):
+        return self._board[location]
 
+    def __iter__(self):
+        for item in self._board.items():
+            yield item
 
-def make_move(board, action):
-    from_location, via_location, to_location = action
-    assert from_location in LOCATIONS
-    assert via_location in LOCATIONS
-    assert to_location in LOCATIONS
-    assert board[from_location]
-    assert board[via_location]
-    assert not board[to_location]
-    board[from_location] = False
-    board[via_location] = False
-    board[to_location] = True
+    def __len__(self):
+        return len(self._board)
 
 
 def obs_to_board(obs):
-    board = create_board()
-    assert len(obs) == len(board)
-    for index, location in enumerate(LOCATIONS):
-        board[location] = bool(obs[index])
-    return board
+    assert len(obs) == len(LOCATIONS)
+    board_dict = {location: bool(obs[index])
+                  for index, location in enumerate(LOCATIONS)}
+    return Board(board_dict)
 
 
 def board_to_obs(board):
@@ -115,7 +127,7 @@ def board_to_obs(board):
 
 def observation_valid_actions(obs):
     board = obs_to_board(obs)
-    return valid_action_indices(board)
+    return board.valid_action_indices()
 
 
 CENTRE = Location(3, 3)
@@ -129,29 +141,29 @@ class SolitaireEnv(Env):
     reward_range = (-100, 0)
 
     def __init__(self):
-        self._board = create_board()
-        self.observation_space = spaces.Box(0, 1, (len(self._board),), np.float32)
+        self._board = Board()
+        self.observation_space = spaces.Box(0, 1, (len(LOCATIONS),), np.float32)
         self.action_space = spaces.Discrete(len(ACTIONS))
 
     def seed(self, seed=None):
         return [seed]
 
     def reset(self):
-        reset_board(self._board)
+        self._board.reset()
         return board_to_obs(self._board)
 
     def step(self, action_index):
         obs = board_to_obs(self._board)
-        done = not valid_action_indices(self._board)
+        done = self._board.done
         if done:
             return obs, 0, True, EMPTY_INFO
         assert 0 <= action_index < len(ACTIONS)
         action = ACTIONS[action_index]
-        if not is_valid_action(self._board, action):
+        if not self._board.is_valid_action(action):
             return obs, -100, False, EMPTY_INFO
-        make_move(self._board, action)
+        self._board.make_move(action)
         obs = board_to_obs(self._board)
-        done = not valid_action_indices(self._board)
+        done = self._board.done
         reward = self._calculate_final_reward() if done else 0
         return obs, reward, done, EMPTY_INFO
 
@@ -171,7 +183,7 @@ class SolitaireEnv(Env):
 
     def _calculate_final_reward(self):
         reward = 0
-        for location, occupied in self._board.items():
+        for location, occupied in self._board:
             if occupied:
                 row, col = location
                 row_diff = abs(row - CENTRE.row)

@@ -2,6 +2,7 @@ import gym
 import pytest
 import numpy as np
 from numpy.testing import assert_array_equal
+from gym_solitaire.envs import observation_valid_actions
 
 
 def test_observation_space():
@@ -55,3 +56,10 @@ def test_render_unsupported_mode():
     env = gym.make('gym_solitaire:gym_solitaire-v0')
     with pytest.raises(NotImplementedError):
         env.render('bogus')
+
+
+def test_observation_valid_actions():
+    env = gym.make('gym_solitaire:gym_solitaire-v0')
+    obs = env.reset()
+    valid_actions = observation_valid_actions(obs)
+    assert len(valid_actions) == 4
