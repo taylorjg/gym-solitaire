@@ -1,6 +1,7 @@
 from collections import namedtuple
 from gym import Env, spaces
 import numpy as np
+import copy
 
 Location = namedtuple('Location', ['row', 'col'])
 Action = namedtuple('Action', ['from_location', 'via_location', 'to_location'])
@@ -55,16 +56,18 @@ def iter_actions():
 
 
 class Board:
-    def __init__(self, board_dict=None):
-        if board_dict is not None:
-            self._board = board_dict
+    def __init__(self, board=None):
+        if board is not None:
+            self._board = copy.deepcopy(board)
         else:
             self._board = {}
             self.reset()
 
     def reset(self):
+        new_board = copy.deepcopy(self._board)
         for location in LOCATIONS:
-            self._board[location] = location != CENTRE
+            new_board[location] = location != CENTRE
+        return Board(new_board)
 
     @property
     def done(self):
@@ -93,12 +96,14 @@ class Board:
         assert from_location in LOCATIONS
         assert via_location in LOCATIONS
         assert to_location in LOCATIONS
-        assert self._board[from_location]
-        assert self._board[via_location]
-        assert not self._board[to_location]
-        self._board[from_location] = False
-        self._board[via_location] = False
-        self._board[to_location] = True
+        new_board = copy.deepcopy(self._board)
+        assert new_board[from_location]
+        assert new_board[via_location]
+        assert not new_board[to_location]
+        new_board[from_location] = False
+        new_board[via_location] = False
+        new_board[to_location] = True
+        return Board(new_board)
 
     def __getitem__(self, location):
         return self._board[location]
@@ -113,9 +118,8 @@ class Board:
 
 def obs_to_board(obs):
     assert len(obs) == len(LOCATIONS)
-    board_dict = {location: bool(obs[index])
-                  for index, location in enumerate(LOCATIONS)}
-    return Board(board_dict)
+    board = {location: bool(obs[index]) for index, location in enumerate(LOCATIONS)}
+    return Board(board)
 
 
 def board_to_obs(board):
@@ -123,11 +127,6 @@ def board_to_obs(board):
     for location in LOCATIONS:
         values.append(board[location])
     return np.array(values, dtype=np.float32)
-
-
-def observation_valid_actions(obs):
-    board = obs_to_board(obs)
-    return board.valid_action_indices()
 
 
 CENTRE = Location(3, 3)
@@ -138,7 +137,7 @@ EMPTY_INFO = {}
 
 class SolitaireEnv(Env):
     metadata = {'render.modes': ['human']}
-    reward_range = (-100, 0)
+    reward_range = (-100, +100)
 
     def __init__(self):
         self._board = Board()
@@ -149,7 +148,7 @@ class SolitaireEnv(Env):
         return [seed]
 
     def reset(self):
-        self._board.reset()
+        self._board = self._board.reset()
         return board_to_obs(self._board)
 
     def step(self, action_index):
@@ -161,7 +160,7 @@ class SolitaireEnv(Env):
         action = ACTIONS[action_index]
         if not self._board.is_valid_action(action):
             return obs, -100, False, EMPTY_INFO
-        self._board.make_move(action)
+        self._board = self._board.make_move(action)
         obs = board_to_obs(self._board)
         done = self._board.done
         reward = self._calculate_final_reward() if done else 0
@@ -174,7 +173,7 @@ class SolitaireEnv(Env):
             line = ''
             for col in range(7):
                 location = row, col
-                if location in self._board:
+                if location in LOCATIONS:
                     line += 'X' if self._board[location] else '.'
                 else:
                     line += ' '
@@ -190,4 +189,4 @@ class SolitaireEnv(Env):
                 col_diff = abs(col - CENTRE.col)
                 manhattan_distance_from_centre = row_diff + col_diff
                 reward -= manhattan_distance_from_centre
-        return reward
+        return 100 if reward == 0 else reward

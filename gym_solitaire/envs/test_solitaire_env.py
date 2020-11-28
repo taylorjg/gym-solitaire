@@ -2,7 +2,8 @@ import gym
 import pytest
 import numpy as np
 from numpy.testing import assert_array_equal
-from gym_solitaire.envs import observation_valid_actions
+# from gym_solitaire.envs import observation_valid_actions
+from gym_solitaire.envs import obs_to_board, board_to_obs
 
 
 def test_observation_space():
@@ -58,8 +59,11 @@ def test_render_unsupported_mode():
         env.render('bogus')
 
 
-def test_observation_valid_actions():
+def test_obs_and_board_round_trip():
     env = gym.make('gym_solitaire:gym_solitaire-v0')
-    obs = env.reset()
-    valid_actions = observation_valid_actions(obs)
+    obs1 = env.reset()
+    board = obs_to_board(obs1)
+    valid_actions = board.valid_action_indices()
     assert len(valid_actions) == 4
+    obs2 = board_to_obs(board)
+    assert str(obs1) == str(obs2)
