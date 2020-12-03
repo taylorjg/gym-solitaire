@@ -1,3 +1,8 @@
+# Description
+
+I wrote this so that I could use it in [solitaire-rl-py](https://github.com/taylorjg/solitaire-rl-py)
+to solve [Peg solitaire](https://en.wikipedia.org/wiki/Peg_solitaire) using reinforcement learning.
+
 # Local Installation
 
 ```

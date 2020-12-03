@@ -71,16 +71,15 @@ class Board:
 
     @property
     def done(self):
-        return not self.valid_action_indices()
+        return not self.valid_actions()
 
-    def valid_action_indices(self):
-        action_indices = []
-        for action_index, action in enumerate(ACTIONS):
-            if self.is_valid_action(action):
-                action_indices.append(action_index)
-        return action_indices
+    def valid_actions(self):
+        action_indices = range(len(ACTIONS))
+        return list(filter(self.is_valid_action, action_indices))
 
-    def is_valid_action(self, action):
+    def is_valid_action(self, action_index):
+        assert 0 <= action_index < len(ACTIONS)
+        action = ACTIONS[action_index]
         from_location, via_location, to_location = action
         assert from_location in LOCATIONS
         assert via_location in LOCATIONS
@@ -91,7 +90,9 @@ class Board:
             not self._board[to_location]
         ])
 
-    def make_move(self, action):
+    def make_move(self, action_index):
+        assert 0 <= action_index < len(ACTIONS)
+        action = ACTIONS[action_index]
         from_location, via_location, to_location = action
         assert from_location in LOCATIONS
         assert via_location in LOCATIONS
@@ -156,11 +157,9 @@ class SolitaireEnv(Env):
         done = self._board.done
         if done:
             return obs, 0, True, EMPTY_INFO
-        assert 0 <= action_index < len(ACTIONS)
-        action = ACTIONS[action_index]
-        if not self._board.is_valid_action(action):
+        if not self._board.is_valid_action(action_index):
             return obs, -100, False, EMPTY_INFO
-        self._board = self._board.make_move(action)
+        self._board = self._board.make_move(action_index)
         obs = board_to_obs(self._board)
         done = self._board.done
         reward = self._calculate_final_reward() if done else 0

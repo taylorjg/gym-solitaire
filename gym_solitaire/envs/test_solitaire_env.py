@@ -63,7 +63,7 @@ def test_obs_and_board_round_trip():
     env = gym.make('gym_solitaire:gym_solitaire-v0')
     obs1 = env.reset()
     board = obs_to_board(obs1)
-    valid_actions = board.valid_action_indices()
+    valid_actions = board.valid_actions()
     assert len(valid_actions) == 4
     obs2 = board_to_obs(board)
     assert str(obs1) == str(obs2)
